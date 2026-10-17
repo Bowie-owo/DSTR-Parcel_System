@@ -22,7 +22,7 @@
 
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
-// #include "task2_service_reuqests/requestManager.hpp"
+// #include "task2_service_requests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 // #include "task4_activity_history/activityManager.hpp"
 // #include "task5_parcel_tree/parcelTree.hpp"
