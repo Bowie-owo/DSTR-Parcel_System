@@ -23,7 +23,7 @@
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
 // #include "task2_service_reuqests/requestManager.hpp"
-// #include "task3_resources/resourceManager.hpp"
+#include "task3_resources/resourceManager.hpp"
 // #include "task4_activity_history/activityManager.hpp"
 // #include "task5_parcel_tree/parcelTree.hpp"
 
@@ -41,7 +41,7 @@ using namespace std;
 // ---- Temporary placeholders so main.cpp compiles on its own ----
 void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented yet.\n"; }
 void requestMenu()  { cout << "\n[Task 2] Service Request menu - not implemented yet.\n"; }
-void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
+// void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
 void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
 void treeMenu()     { cout << "\n[Task 5] Parcel Tree menu - not implemented yet.\n"; }
 #else

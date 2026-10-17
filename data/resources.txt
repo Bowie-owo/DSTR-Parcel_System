@@ -1,0 +1,8 @@
+CC01|Collection Counter|Block A Lobby|Available|-|0
+CC02|Collection Counter|Block B Lobby|Maintenance|-|0
+CC03|Collection Counter|Library Foyer|Available|-|0
+DD01|Delivery Desk|Main Office|Available|-|0
+SH01|Special-Handling Counter|Security Office|Available|-|1
+DP01|Delivery Personnel|-|Occupied|DP02|0
+DP02|Delivery Personnel|-|Unavailable|-|3
+CC04|Delivery Desk|Block B Level 3|Available|-|0
