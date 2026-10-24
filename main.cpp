@@ -20,14 +20,17 @@
 #include <iostream>
 #include <string>
 
+#include "common/Utils.hpp" // shared input helpers: readInt, readYesNo, ...
+
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
 // #include "task2_service_requests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
-// #include "task4_activity_history/activityManager.hpp"
+#include "task4_activity_history/activityManager.hpp"
 // #include "task5_parcel_tree/parcelTree.hpp"
 
 using namespace std;
+using namespace common;
 
 // ---------------------------------------------------------------------
 //  Menu entry points. Each owner implements their own in their folder:
@@ -42,7 +45,7 @@ using namespace std;
 void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented yet.\n"; }
 void requestMenu()  { cout << "\n[Task 2] Service Request menu - not implemented yet.\n"; }
 // void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
-void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
+// void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
 void treeMenu()     { cout << "\n[Task 5] Parcel Tree menu - not implemented yet.\n"; }
 #else
 void parcelMenu();
@@ -53,8 +56,7 @@ void treeMenu();
 #endif
 
 // ---------------------------------------------------------------------
-//  Input helpers (move these into common/Utils later so all members
-//  share the same validation)
+//  Small screen helpers (the input helpers live in common/Utils)
 // ---------------------------------------------------------------------
 
 // Waits for the user to press Enter so output does not scroll away.
@@ -75,80 +77,8 @@ void clearScreen()
 #endif
 }
 
-// Reads an integer between minValue and maxValue (inclusive).
-// Rejects empty input, letters, symbols, decimals and out-of-range values.
-int readInt(const string &prompt, int minValue, int maxValue)
-{
-    while (true)
-    {
-        cout << prompt;
-        string line;
-        if (!getline(cin, line))
-        {
-            // Input stream closed (e.g. Ctrl+Z / Ctrl+D): exit safely.
-            return minValue;
-        }
-
-        // Trim leading/trailing spaces
-        size_t first = line.find_first_not_of(" \t");
-        size_t last = line.find_last_not_of(" \t");
-        if (first == string::npos)
-        {
-            cout << "  Invalid input: please enter a number.\n";
-            continue;
-        }
-        line = line.substr(first, last - first + 1);
-
-        // Must be digits only and a sensible length
-        bool allDigits = true;
-        for (size_t i = 0; i < line.size(); i++)
-        {
-            if (line[i] < '0' || line[i] > '9')
-            {
-                allDigits = false;
-                break;
-            }
-        }
-        if (!allDigits || line.size() > 9)
-        {
-            cout << "  Invalid input: digits only, please try again.\n";
-            continue;
-        }
-
-        int value = 0;
-        for (size_t i = 0; i < line.size(); i++)
-        {
-            value = value * 10 + (line[i] - '0');
-        }
-
-        if (value < minValue || value > maxValue)
-        {
-            cout << "  Out of range: choose between " << minValue
-                 << " and " << maxValue << ".\n";
-            continue;
-        }
-        return value;
-    }
-}
-
-// Asks a Y/N question. Returns true for Y/y, false for N/n.
-bool readYesNo(const string &prompt)
-{
-    while (true)
-    {
-        cout << prompt << " (Y/N): ";
-        string line;
-        if (!getline(cin, line))
-        {
-            return false;
-        }
-        if (line == "Y" || line == "y")
-            return true;
-        if (line == "N" || line == "n")
-            return false;
-        cout << "  Please enter Y or N.\n";
-    }
-}
+// readInt() and readYesNo() now come from common/Utils (namespace common),
+// so every module validates input in exactly the same way.
 
 // ---------------------------------------------------------------------
 //  End-to-end workflow (integration demo)
@@ -212,6 +142,10 @@ void showMainMenu()
 
 int main()
 {
+    // Task 4 <-> Task 3 connection: register the activity-history hook ONCE,
+    // before any menu runs, so every resource action is recorded automatically.
+    connectActivityLogging();
+
     // TODO (integration): create one object of each manager here and pass
     // references between them, for example:
     //   ParcelManager   parcels;

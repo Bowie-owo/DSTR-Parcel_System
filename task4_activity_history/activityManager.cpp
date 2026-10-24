@@ -13,7 +13,6 @@
 // =====================================================================
 #include "activityManager.hpp"
 
-#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -33,14 +32,13 @@ namespace
 const string NONE = "-";       // placeholder for "not applicable"
 const char FILE_SEPARATOR = '\t'; // data-file separator (details contain '|')
 
-// Current local date and time as "YYYY-MM-DD HH:MM:SS".
+// Current local date and time as "YYYY-MM-DD HH:MM", from the shared helper in
+// common/Utils (the activity number keeps same-minute activities in order).
+// Falls back to "-" if the clock cannot be read.
 string currentTimestamp()
 {
-    time_t now = time(nullptr);
-    tm *local = localtime(&now);
-    char buffer[32];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", local);
-    return string(buffer);
+    string now = currentDateTime();
+    return now.empty() ? NONE : now;
 }
 
 // Splits 'text' at every 'separator'. Fills parts[0..maxParts-1] and returns the

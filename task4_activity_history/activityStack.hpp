@@ -34,7 +34,7 @@
 struct ActivityRecord
 {
     int sequence;               // running number: 1, 2, 3 ... (processing order)
-    std::string timestamp;      // when it happened, "YYYY-MM-DD HH:MM:SS"
+    std::string timestamp;      // when it happened, "YYYY-MM-DD HH:MM"
     std::string action;         // REGISTER, STATUS, ASSIGN, RELEASE, ...
     std::string itemId;         // parcel or request ID involved
     std::string resourceId;     // counter / rider involved
