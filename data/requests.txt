@@ -1,8 +1,8 @@
 REQ001|PCL001|TP012345|Aisyah Rahman|Recipient Collection|2026-10-16 09:15|Pending
 REQ002|PCL002|TP023456|Daniel Lim|Campus Delivery|2026-10-16 09:20|Pending
-REQ003|PCL003|TP034567|Priya Nair|Special Handling|2026-10-16 09:42|Pending
-REQ004|PCL004|TP045678|Wei Jie Tan|Return to Sender|2026-10-16 10:05|Processing
-REQ005|PCL005|TP056789|Nurul Huda|Re-delivery|2026-10-16 10:30|Pending
+REQ003|PCL003|TP034567|Priya Nair|Special Handling|2026-10-16 09:42|Cancelled
+REQ004|PCL004|TP045678|Wei Jie Tan|Return to Sender|2026-10-16 10:05|Completed
+REQ005|PCL005|TP056789|Nurul Huda|Re-delivery|2026-10-16 10:30|Processing
 REQ006|PCL006|TP067890|Kevin Ong|Recipient Collection|2026-10-16 10:48|Completed
 REQ007|PCL007|TP078901|Sarah Lee|Campus Delivery|2026-10-16 11:02|Cancelled
 REQ008|PCL008|TP089012|Ahmad Faris|Return to Sender|2026-10-16 11:20|Returned
