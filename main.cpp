@@ -10,6 +10,8 @@
 //
 //  Build from the project root in PowerShell:
 //    g++ main.cpp -o main.exe
+//  Build from the project root in PowerShell:
+//    g++ main.cpp -o main.exe
 //
 //  Task 1 and 5 still use placeholder menus below. The implemented
 //  Task 2, 3, and 4 source files are included at the end of this file so
@@ -24,6 +26,7 @@
 
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
+#include "task2_service_reuqests/requestManager.hpp"
 #include "task2_service_reuqests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 #include "task4_activity_history/activityManager.hpp"
@@ -41,6 +44,7 @@ using namespace common;
 //    Task 5 -> void treeMenu();        (parcelTree.cpp)
 // ---------------------------------------------------------------------
 #ifndef MODULES_READY
+// ---- Placeholders for modules that are not implemented yet ----
 // ---- Placeholders for modules that are not implemented yet ----
 void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented yet.\n"; }
 // Task 2 and Task 3 provide their menu functions in their source files.
@@ -111,7 +115,7 @@ void runWorkflowDemo()
         //   Step 6 -> resources.assign(...);
         cout << "  (module call not connected yet)\n";
 
-        if (i < 9 && !readYesNo("Continue to next step?"))
+        if (i < 9 && !mainReadYesNo("Continue to next step?"))
         {
             cout << "Workflow stopped.\n";
             return;
@@ -157,7 +161,7 @@ int main()
     do
     {
         showMainMenu();
-        choice = readInt(" Enter choice: ", 0, 6);
+        choice = mainReadInt(" Enter choice: ", 0, 6);
 
         // Input stream closed (Ctrl+Z / Ctrl+D / end of piped input):
         // leave the program instead of looping forever.
@@ -188,7 +192,7 @@ int main()
             runWorkflowDemo();
             break;
         case 0:
-            if (!readYesNo("\nAre you sure you want to exit?"))
+            if (!mainReadYesNo("\nAre you sure you want to exit?"))
             {
                 choice = -1; // stay in the loop
             }
@@ -215,3 +219,12 @@ int main()
 #include "task3_resources/resourceManager.cpp"
 #include "task4_activity_history/activityStack.cpp"
 #include "task4_activity_history/activityManager.cpp"
+
+// Include the implemented modules here so `g++ main.cpp -o main.exe`
+// builds the complete current system. Do not compile these files
+// separately alongside main.cpp, or their definitions will be duplicated.
+#include "common/Utils.cpp"
+#include "task2_service_reuqests/requestManager.cpp"
+#include "task2_service_reuqests/requestPriorityQueue.cpp"
+#include "task3_resources/resourceCircularQueue.cpp"
+#include "task3_resources/resourceManager.cpp"

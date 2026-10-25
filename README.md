@@ -17,8 +17,10 @@ The system is split into five task modules plus a shared `common/` folder. `main
 ├── data/
 │   ├── resources.txt                Task 3 data file (created on first save)
 │   └── requests.txt                 service request records (pipe-separated)
+│   └── requests.txt                 service request records (pipe-separated)
 ├── common/                          shared by every task
 │   ├── Parcel.hpp                   Parcel struct + status enum (no data structure here)
+│   ├── serviceRequest.hpp           ServiceRequest struct
 │   ├── serviceRequest.hpp           ServiceRequest struct
 │   ├── Resource.hpp                 Resource struct + resource types/statuses
 │   ├── Activity.hpp                 Activity struct
@@ -27,6 +29,8 @@ The system is split into five task modules plus a shared `common/` folder. `main
 │   ├── parcelList.hpp/.cpp          linked list: stores all parcel records
 │   ├── parcelQueue.hpp/.cpp         queue: parcels waiting to be processed
 │   └── parcelManager.hpp/.cpp       uses both, plus parcelMenu()
+├── task2_service_reuqests/
+│   ├── requestPriorityQueue.hpp/.cpp   hand-written priority queue (sorted linked list)
 ├── task2_service_reuqests/
 │   ├── requestPriorityQueue.hpp/.cpp   hand-written priority queue (sorted linked list)
 │   └── requestManager.hpp/.cpp         uses it, plus requestMenu()
@@ -108,6 +112,19 @@ menus until their modules are implemented.
  8. Display completed/cancelled/returned requests
  0. Back
 ```
+
+Task 2 stores every request in a hand-written singly linked list. Pending
+requests are also referenced by a sorted linked priority queue. Special
+Handling comes first, then Return to Sender, Re-delivery, Campus Delivery,
+and Recipient Collection. Requests with equal service priority are ordered by
+oldest request time, then by Request ID. A request moves from Pending to
+Processing before it can be completed, returned, or cancelled; finished
+requests stay in `data/requests.txt` as history.
+
+New requests are accepted only when their Parcel ID is present as the first
+field in a row of `data/parcels.txt`. Parcel rows can contain more fields
+separated by `|`. The request file uses this format:
+`RequestID|ParcelID|RecipientID|RecipientName|ServiceType|DateTime|Status`.
 
 Task 2 stores every request in a hand-written singly linked list. Pending
 requests are also referenced by a sorted linked priority queue. Special
