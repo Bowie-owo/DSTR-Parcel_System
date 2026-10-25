@@ -27,7 +27,6 @@
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
 #include "task2_service_reuqests/requestManager.hpp"
-#include "task2_service_reuqests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 #include "task4_activity_history/activityManager.hpp"
 // #include "task5_parcel_tree/parcelTree.hpp"
@@ -161,7 +160,7 @@ int main()
     do
     {
         showMainMenu();
-        choice = mainReadInt(" Enter choice: ", 0, 6);
+        choice = readInt(" Enter choice: ", 0, 6);
 
         // Input stream closed (Ctrl+Z / Ctrl+D / end of piped input):
         // leave the program instead of looping forever.
@@ -192,7 +191,7 @@ int main()
             runWorkflowDemo();
             break;
         case 0:
-            if (!mainReadYesNo("\nAre you sure you want to exit?"))
+            if (!readYesNo("\nAre you sure you want to exit?"))
             {
                 choice = -1; // stay in the loop
             }
@@ -207,7 +206,6 @@ int main()
 
     cout << "\nThank you for using the system. Goodbye!\n";
     return 0;
-}
 
 // Include the implemented modules here so `g++ main.cpp -o main.exe`
 // builds the complete current system. Do not compile these files
@@ -219,12 +217,3 @@ int main()
 #include "task3_resources/resourceManager.cpp"
 #include "task4_activity_history/activityStack.cpp"
 #include "task4_activity_history/activityManager.cpp"
-
-// Include the implemented modules here so `g++ main.cpp -o main.exe`
-// builds the complete current system. Do not compile these files
-// separately alongside main.cpp, or their definitions will be duplicated.
-#include "common/Utils.cpp"
-#include "task2_service_reuqests/requestManager.cpp"
-#include "task2_service_reuqests/requestPriorityQueue.cpp"
-#include "task3_resources/resourceCircularQueue.cpp"
-#include "task3_resources/resourceManager.cpp"
