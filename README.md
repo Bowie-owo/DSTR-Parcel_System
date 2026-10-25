@@ -54,11 +54,11 @@ g++ main.cpp -o main.exe
 .\main.exe
 ```
 
-The implemented Task 2 and Task 3 source files are included at the end of
-`main.cpp`, so compiling only `main.cpp` also builds their menus. Do not list
-those same `.cpp` files again in the build command, or the linker will report
-duplicate definitions. Task 1, 4, and 5 still show placeholder menus until
-their modules are implemented.
+The implemented Task 2, Task 3, and Task 4 source files are included at the
+end of `main.cpp`, so compiling only `main.cpp` also builds their menus. Do
+not list those same `.cpp` files again in the build command, or the linker
+will report duplicate definitions. Task 1 and Task 5 still show placeholder
+menus until their modules are implemented.
 
 ---
 
