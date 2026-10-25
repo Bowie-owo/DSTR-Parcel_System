@@ -104,7 +104,7 @@ bool parseRecordLine(const string &line, ActivityRecord &record)
 }
 
 // ---- printing --------------------------------------------------------
-void printTableHeader()
+void printActivityTableHeader()
 {
     cout << left << setw(6) << "No." << setw(21) << "Time" << setw(18) << "Action"
          << setw(10) << "Item" << setw(10) << "Resource" << setw(28) << "Status change"
@@ -327,7 +327,7 @@ void ActivityManager::displayRecent(int maxItems) const
         return;
     }
     cout << "\n=========== RECENT ACTIVITIES (newest first) ===========\n";
-    printTableHeader();
+    printActivityTableHeader();
     int shown = 0;
     for (ActivityNode *node = history.top(); node != nullptr && shown < maxItems; node = node->next)
     {
@@ -370,7 +370,7 @@ void ActivityManager::displayHistoryFor(const string &idInput) const
     }
 
     cout << "\n=========== HISTORY FOR " << id << " (oldest first) ===========\n";
-    printTableHeader();
+    printActivityTableHeader();
     ActivityRecord record, newest;
     while (matches.pop(record))
     {
@@ -571,7 +571,7 @@ void connectActivityLogging()
 namespace
 {
 // Prints the success text or "Error: ..." for an operation result.
-void report(bool success, const string &successText, const string &err)
+void reportActivityResult(bool success, const string &successText, const string &err)
 {
     cout << "\n  " << (success ? successText : "Error: " + err) << "\n";
 }
@@ -614,7 +614,7 @@ void undoLastFlow(ActivityManager &manager)
     }
     string message, err;
     bool ok = manager.undoLatest(message, err);
-    report(ok, message, err);
+    reportActivityResult(ok, message, err);
 }
 
 // ---- option 5 ----
@@ -640,7 +640,7 @@ void undoSelectedFlow(ActivityManager &manager)
     }
     string message, err;
     bool ok = manager.undoBySequence(number, message, err);
-    report(ok, message, err);
+    reportActivityResult(ok, message, err);
 }
 } // namespace
 

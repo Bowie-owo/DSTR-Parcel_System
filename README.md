@@ -16,10 +16,10 @@ The system is split into five task modules plus a shared `common/` folder. `main
 ├── README.md
 ├── data/
 │   ├── resources.txt                Task 3 data file (created on first save)
-│   └── requests.txt                 sample service requests (Task 2 owner to confirm format)
+│   └── requests.txt                 service request records (pipe-separated)
 ├── common/                          shared by every task
 │   ├── Parcel.hpp                   Parcel struct + status enum (no data structure here)
-│   ├── ServiceRequest.hpp           ServiceRequest struct
+│   ├── serviceRequest.hpp           ServiceRequest struct
 │   ├── Resource.hpp                 Resource struct + resource types/statuses
 │   ├── Activity.hpp                 Activity struct
 │   ├── Utils.hpp / Utils.cpp        readInt, readYesNo, text and date/time helpers
@@ -27,8 +27,8 @@ The system is split into five task modules plus a shared `common/` folder. `main
 │   ├── parcelList.hpp/.cpp          linked list: stores all parcel records
 │   ├── parcelQueue.hpp/.cpp         queue: parcels waiting to be processed
 │   └── parcelManager.hpp/.cpp       uses both, plus parcelMenu()
-├── task2_service_requests/
-│   ├── requestPriorityQueue.hpp/.cpp   priority queue (sorted linked list or heap)
+├── task2_service_reuqests/
+│   ├── requestPriorityQueue.hpp/.cpp   hand-written priority queue (sorted linked list)
 │   └── requestManager.hpp/.cpp         uses it, plus requestMenu()
 ├── task3_resources/
 │   ├── resourceCircularQueue.hpp/.cpp  circular queue of counters/riders
@@ -46,7 +46,19 @@ The system is split into five task modules plus a shared `common/` folder. `main
 
 ## 2. Build and run
 
-Build from the project root (the folder that contains `main.cpp`
+In PowerShell, first move to the project root (the folder that contains
+`main.cpp`), then build and run:
+
+```powershell
+g++ main.cpp -o main.exe
+.\main.exe
+```
+
+The implemented Task 2 and Task 3 source files are included at the end of
+`main.cpp`, so compiling only `main.cpp` also builds their menus. Do not list
+those same `.cpp` files again in the build command, or the linker will report
+duplicate definitions. Task 1, 4, and 5 still show placeholder menus until
+their modules are implemented.
 
 ---
 
@@ -92,8 +104,23 @@ Build from the project root (the folder that contains `main.cpp`
  4. View next request to handle
  5. Process next request
  6. Cancel request
- 0. Back
+ 7. Complete or return a processing request
+ 8. Display completed/cancelled/returned requests
+ 9. Back
 ```
+
+Task 2 stores every request in a hand-written singly linked list. Pending
+requests are also referenced by a sorted linked priority queue. Special
+Handling comes first, then Return to Sender, Re-delivery, Campus Delivery,
+and Recipient Collection. Requests with equal service priority are ordered by
+oldest request time, then by Request ID. A request moves from Pending to
+Processing before it can be completed, returned, or cancelled; finished
+requests stay in `data/requests.txt` as history.
+
+New requests are accepted only when their Parcel ID is present as the first
+field in a row of `data/parcels.txt`. Parcel rows can contain more fields
+separated by `|`. The request file uses this format:
+`RequestID|ParcelID|RecipientID|RecipientName|ServiceType|DateTime|Status`.
 
 ### Task 3 – Resources
 

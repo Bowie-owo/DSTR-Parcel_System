@@ -8,12 +8,12 @@
 //    2. validates the user's choice
 //    3. hands control to the correct module
 //
-//  Build (from project root):
-//    g++ -std=c++17 -I. main.cpp common/*.cpp task*/*.cpp -o campus
+//  Build from the project root in PowerShell:
+//    g++ main.cpp -o main.exe
 //
-//  While modules are still being written, build with the placeholder
-//  menus below (default). Once a member's menu is ready, remove the
-//  matching placeholder block and include their header.
+//  Task 1 and 5 still use placeholder menus below. The implemented
+//  Task 2, 3, and 4 source files are included at the end of this file so
+//  the one-file build command above links their menus too.
 // =====================================================================
 
 #include <cstdlib>   // system()
@@ -24,7 +24,7 @@
 
 // ---- Module headers: uncomment each one when that member is ready ----
 // #include "task1_parcel_intake/parcelManager.hpp"
-// #include "task2_service_requests/requestManager.hpp"
+#include "task2_service_reuqests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 #include "task4_activity_history/activityManager.hpp"
 // #include "task5_parcel_tree/parcelTree.hpp"
@@ -41,16 +41,14 @@ using namespace common;
 //    Task 5 -> void treeMenu();        (parcelTree.cpp)
 // ---------------------------------------------------------------------
 #ifndef MODULES_READY
-// ---- Temporary placeholders so main.cpp compiles on its own ----
+// ---- Placeholders for modules that are not implemented yet ----
 void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented yet.\n"; }
-void requestMenu()  { cout << "\n[Task 2] Service Request menu - not implemented yet.\n"; }
+// Task 2 and Task 3 provide their menu functions in their source files.
 // void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
 // void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
 void treeMenu()     { cout << "\n[Task 5] Parcel Tree menu - not implemented yet.\n"; }
 #else
 void parcelMenu();
-void requestMenu();
-void resourceMenu();
 void activityMenu();
 void treeMenu();
 #endif
@@ -206,3 +204,14 @@ int main()
     cout << "\nThank you for using the system. Goodbye!\n";
     return 0;
 }
+
+// Include the implemented modules here so `g++ main.cpp -o main.exe`
+// builds the complete current system. Do not compile these files
+// separately alongside main.cpp, or their definitions will be duplicated.
+#include "common/Utils.cpp"
+#include "task2_service_reuqests/requestManager.cpp"
+#include "task2_service_reuqests/requestPriorityQueue.cpp"
+#include "task3_resources/resourceCircularQueue.cpp"
+#include "task3_resources/resourceManager.cpp"
+#include "task4_activity_history/activityStack.cpp"
+#include "task4_activity_history/activityManager.cpp"
