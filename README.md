@@ -106,7 +106,7 @@ menus until their modules are implemented.
  6. Cancel request
  7. Complete or return a processing request
  8. Display completed/cancelled/returned requests
- 9. Back
+ 0. Back
 ```
 
 Task 2 stores every request in a hand-written singly linked list. Pending

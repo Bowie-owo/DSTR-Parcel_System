@@ -528,10 +528,10 @@ void requestMenu()
              << " 6. Cancel request\n"
              << " 7. Complete or return a processing request\n"
              << " 8. Display completed/cancelled/returned requests\n"
-             << " 9. Back\n";
+             << " 0. Back\n";
 
-        int choice = readInt(" Choose: ", 1, 9);
-        if (cin.eof() || choice == 9)
+        int choice = readInt(" Choose: ", 0, 8);
+        if (cin.eof() || choice == 0)
             return;
 
         string error;
