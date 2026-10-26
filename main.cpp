@@ -29,7 +29,7 @@
 #include "task2_service_reuqests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 #include "task4_activity_history/activityManager.hpp"
-// #include "task5_parcel_tree/parcelTree.hpp"
+#include "task5_parcel_tree/parcelTree.hpp"
 
 using namespace std;
 using namespace common;
@@ -49,8 +49,8 @@ void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented y
 // Task 2 and Task 3 provide their menu functions in their source files.
 // void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
 // void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
-void treeMenu()     { cout << "\n[Task 5] Parcel Tree menu - not implemented yet.\n"; }
-#else
+// void treeMenu()     { cout << "\n[Task 5] Parcel Tree menu - not implemented yet.\n"; }
+// #else
 void parcelMenu();
 void activityMenu();
 void treeMenu();
@@ -217,3 +217,4 @@ int main()
 #include "task3_resources/resourceManager.cpp"
 #include "task4_activity_history/activityStack.cpp"
 #include "task4_activity_history/activityManager.cpp"
+#include "task5_parcel_tree/parcelTree.cpp"
