@@ -114,7 +114,7 @@ void runWorkflowDemo()
         //   Step 6 -> resources.assign(...);
         cout << "  (module call not connected yet)\n";
 
-        if (i < 9 && !mainReadYesNo("Continue to next step?"))
+        if (i < 9 && !common::readYesNo("Continue to next step?"))
         {
             cout << "Workflow stopped.\n";
             return;
@@ -206,7 +206,7 @@ int main()
 
     cout << "\nThank you for using the system. Goodbye!\n";
     return 0;
-
+}
 // Include the implemented modules here so `g++ main.cpp -o main.exe`
 // builds the complete current system. Do not compile these files
 // separately alongside main.cpp, or their definitions will be duplicated.
