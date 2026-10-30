@@ -16,10 +16,10 @@ namespace {
 
 const char* tree_PARCEL_FILE = "data/parcels.txt";
 
-const int tree_NUM_STATUSES = 10;
+const int tree_NUM_STATUSES = 11;
 const char* tree_VALID_STATUSES[tree_NUM_STATUSES] = {
     "Pending", "Registered", "Sorted", "Processing", "Ready for Collection",
-    "Out for Delivery", "Completed", "Returned", "Missing", "Cancelled"};
+    "Out for Delivery", "Completed", "Returned", "Missing", "Cancelled", "Special Handling"};
 
 const int tree_NUM_CATEGORIES = 5;
 const char* tree_VALID_CATEGORIES[tree_NUM_CATEGORIES] = {
