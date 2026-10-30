@@ -1,8 +1,9 @@
-PCL001|TP012345|Aisyah Rahman|Standard Parcel|2026-10-16 09:00|Pending|Block A Lobby
-PCL002|TP023456|Daniel Lim|Fragile Box|2026-10-16 09:10|Pending|Block B Lobby
+PCL001|TP012345|Aisyah Rahman|Standard Parcel|2026-10-16 09:00|Out for Delivery|Block A Lobby
+PCL002|TP023456|Daniel Lim|Fragile Box|2026-10-16 09:10|Special Handling|Block B Lobby
 PCL003|TP034567|Priya Nair|Document|2026-10-16 09:30|Cancelled|Security Office
 PCL004|TP045678|Wei Jie Tan|Electronics|2026-10-16 09:50|Completed|Main Office
-PCL005|TP056789|Nurul Huda|Clothing|2026-10-16 10:15|Processing|Block B Level 3
+PCL005|TP056789|Nurul Huda|Clothing|2026-10-16 10:15|Out for Delivery|Block B Level 3
 PCL006|TP067890|Kevin Ong|Standard Parcel|2026-10-16 10:30|Completed|Library Foyer
-PCL007|TP078901|Sarah Lee|Fragile Box|2026-10-16 10:50|Cancelled|Main Office
 PCL008|TP089012|Ahmad Faris|Document|2026-10-16 11:10|Returned|Security Office
+PCL009|TP077477|Zhilin|Standard Parcel|2026-10-30 18:10|Cancelled|Block A Lobby
+PCL010|TP077414|Ming Cyn|Fragile Box|2026-10-30 18:17|Pending|Block B Lobby

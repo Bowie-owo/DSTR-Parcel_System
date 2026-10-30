@@ -25,7 +25,8 @@
 #include "common/Utils.hpp" // shared input helpers: readInt, readYesNo, ...
 
 // ---- Module headers: uncomment each one when that member is ready ----
-// #include "task1_parcel_intake/parcelManager.hpp"
+#include "task1_parcel_intake/parcelQueue.hpp"
+#include "task1_parcel_intake/parcelManager.hpp"
 #include "task2_service_reuqests/requestManager.hpp"
 #include "task3_resources/resourceManager.hpp"
 #include "task4_activity_history/activityManager.hpp"
@@ -45,7 +46,8 @@ using namespace common;
 #ifndef MODULES_READY
 // ---- Placeholders for modules that are not implemented yet ----
 // ---- Placeholders for modules that are not implemented yet ----
-void parcelMenu()   { cout << "\n[Task 1] Parcel Intake menu - not implemented yet.\n"; }
+void parcelManagerMenu();   // Task 1
+void parcelMenu()   { parcelManagerMenu(); }   // Task 1
 // Task 2 and Task 3 provide their menu functions in their source files.
 // void resourceMenu() { cout << "\n[Task 3] Resource menu - not implemented yet.\n"; }
 // void activityMenu() { cout << "\n[Task 4] Activity History menu - not implemented yet.\n"; }
@@ -211,6 +213,8 @@ int main()
 // builds the complete current system. Do not compile these files
 // separately alongside main.cpp, or their definitions will be duplicated.
 #include "common/Utils.cpp"
+#include "task1_parcel_intake/parcelQueue.cpp"
+#include "task1_parcel_intake/parcelManager.cpp"
 #include "task2_service_reuqests/requestManager.cpp"
 #include "task2_service_reuqests/requestPriorityQueue.cpp"
 #include "task3_resources/resourceCircularQueue.cpp"
