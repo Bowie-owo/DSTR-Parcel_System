@@ -67,6 +67,12 @@ public:
     static bool validateParcel(const Parcel& p, std::string& error);
 };
 
+// One shared tree for the whole program (Task 1 and Task 4 keep it up to date).
+ParcelTree& getParcelTree();
+
+// Loads every record of data/parcels.txt into the tree without printing anything.
+void treeLoadParcelsFromFile(ParcelTree& tree);
+
 // Menu function interface for main.cpp
 void treeMenu();
 

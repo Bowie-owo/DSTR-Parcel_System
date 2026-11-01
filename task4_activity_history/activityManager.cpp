@@ -19,6 +19,7 @@
 #include <sstream>
 
 #include "../common/Utils.hpp"
+#include "../task1_parcel_intake/parcelManager.hpp"
 #include "../task3_resources/resourceManager.hpp"
 
 using namespace std;
@@ -107,16 +108,16 @@ bool parseRecordLine(const string &line, ActivityRecord &record)
 void printActivityTableHeader()
 {
     cout << left << setw(6) << "No." << setw(21) << "Time" << setw(18) << "Action"
-         << setw(10) << "Item" << setw(10) << "Resource" << setw(28) << "Status change"
+         << setw(10) << "Item" << setw(10) << "Resource" << setw(42) << "Status change"
          << "State\n";
-    cout << string(100, '-') << "\n";
+    cout << string(114, '-') << "\n";
 }
 
 void printTableRow(const ActivityRecord &r)
 {
     string change = r.previousStatus + " -> " + r.newStatus;
     cout << left << setw(6) << r.sequence << setw(21) << r.timestamp << setw(18) << r.action
-         << setw(10) << r.itemId << setw(10) << r.resourceId << setw(28) << change
+         << setw(10) << r.itemId << setw(10) << r.resourceId << setw(42) << change
          << (r.undone ? "Reversed" : "Active") << "\n";
 }
 
@@ -135,10 +136,19 @@ void printDetail(const ActivityRecord &r)
          << (r.undone ? "Reversed at " + r.undoneTime : string("Active")) << "\n";
 }
 
-// True when the ID appears as the parcel/request or the resource of the activity.
+// True when the ID appears as the parcel/request, the resource, or as one of the
+// '|' separated pieces of the details text. The details check lets a parcel ID find
+// its request activities too (details "REQ001|PCL001" matches both REQ001 and PCL001).
 bool recordMatchesId(const ActivityRecord &r, const string &id)
 {
-    return r.itemId == id || r.resourceId == id;
+    if (r.itemId == id || r.resourceId == id)
+        return true;
+    string pieces[6];
+    int pieceCount = splitFields(r.details, '|', pieces, 6);
+    for (int i = 0; i < pieceCount && i < 6; i++)
+        if (toUpper(pieces[i]) == id)
+            return true;
+    return false;
 }
 } // namespace
 
@@ -255,7 +265,7 @@ void ActivityManager::addRecord(ActivityRecord &record)
     save();
 }
 
-// Task 3 hook. Turns the (action, details) text into a full record.
+// Hook entry for Tasks 1, 2 and 3. Turns the (action, details) text into a full record.
 void ActivityManager::record(const string &action, const string &details)
 {
     ActivityRecord rec;
@@ -294,6 +304,37 @@ void ActivityManager::record(const string &action, const string &details)
     {
         rec.resourceId = parts[0];
         rec.newStatus = "Removed";
+    }
+    else if (action.compare(0, 7, "PARCEL_") == 0 && pieceCount >= 3) // "parcelID|old|new"
+    {
+        rec.itemId = parts[0];
+        rec.previousStatus = parts[1];
+        rec.newStatus = parts[2];
+    }
+    else if ((action == "CREATE_REQUEST" || action == "PROCESS_REQUEST" ||
+              action == "CANCEL_REQUEST" || action == "COMPLETE_REQUEST" ||
+              action == "RETURN_REQUEST") &&
+             pieceCount >= 2) // "requestID|parcelID"
+    {
+        rec.itemId = parts[0]; // the parcel ID stays in the details text and is searchable
+        if (action == "CREATE_REQUEST")
+        {
+            rec.newStatus = "Pending";
+        }
+        else if (action == "PROCESS_REQUEST")
+        {
+            rec.previousStatus = "Pending";
+            rec.newStatus = "Processing";
+        }
+        else if (action == "CANCEL_REQUEST")
+        {
+            rec.newStatus = "Cancelled";
+        }
+        else
+        {
+            rec.previousStatus = "Processing";
+            rec.newStatus = (action == "RETURN_REQUEST") ? "Returned" : "Completed";
+        }
     }
     // Any other action is stored as it is, with the raw details text.
     addRecord(rec);
@@ -422,13 +463,19 @@ bool ActivityManager::displayActivity(int sequence) const
 //  5. Undo / reverse
 // =====================================================================
 
-// Only these activities have a matching reverse operation in Task 3 today:
-//   REGISTER -> remove the resource again
-//   STATUS   -> put the previous status back
-// ASSIGN, RELEASE, INTERRUPT and REMOVE need extra Task 3 functions first.
+// Activities that have a matching reverse operation today:
+//   Task 3  REGISTER        -> remove the resource again
+//   Task 3  STATUS          -> put the previous resource status back
+//   Task 1  PARCEL_REGISTER -> remove the parcel record again (only while Pending/Cancelled)
+//   Task 1  PARCEL_ROUTE / PARCEL_STATUS / PARCEL_MISSING / PARCEL_CANCEL
+//                           -> restore the previous parcel status
+// ASSIGN, RELEASE, INTERRUPT, REMOVE, PARCEL_REMOVE and every request activity have no
+// reverse function in their module yet, so they are reported as "cannot be reversed".
 bool ActivityManager::isReversible(const string &action)
 {
-    return action == "REGISTER" || action == "STATUS";
+    return action == "REGISTER" || action == "STATUS" || action == "PARCEL_REGISTER" ||
+           action == "PARCEL_ROUTE" || action == "PARCEL_STATUS" || action == "PARCEL_MISSING" ||
+           action == "PARCEL_CANCEL";
 }
 
 // Newest activity that has not been reversed yet (nullptr if none).
@@ -449,10 +496,45 @@ ActivityNode *ActivityManager::findBySequence(int sequence) const
     return nullptr;
 }
 
-// Performs the real reverse operation through Task 3. 'undoing' is raised
-// first so the hook calls fired by Task 3 are ignored by record()/addRecord().
+// Performs the real reverse operation through Task 1 or Task 3. 'undoing' is raised
+// first so the hook calls fired by those modules are ignored by addRecord().
 bool ActivityManager::applyReversal(const ActivityRecord &record, string &err)
 {
+    bool success = false;
+
+    if (record.action.compare(0, 7, "PARCEL_") == 0)
+    {
+        // ---------------- Task 1: parcel activities ----------------
+        ParcelManager &parcels = getParcelManager();
+        Parcel *target = parcels.findParcel(record.itemId);
+        if (target == nullptr)
+        {
+            err = "Parcel " + record.itemId + " no longer exists, so there is nothing to reverse.";
+            return false;
+        }
+
+        undoing = true;
+        if (record.action == "PARCEL_REGISTER")
+        {
+            // Undo a registration = remove the parcel record (fails if it is already being processed).
+            success = parcels.removeRecord(record.itemId, err);
+        }
+        else if (target->status != record.newStatus)
+        {
+            // Something else changed the parcel after this activity: reversing would
+            // leave an invalid or inconsistent status.
+            err = "Parcel " + record.itemId + " is now '" + target->status + "' (expected '" +
+                  record.newStatus + "'). Reversing would give an invalid status.";
+        }
+        else
+        {
+            success = parcels.restoreStatus(record.itemId, record.previousStatus, err);
+        }
+        undoing = false; // always lowered again, success or not
+        return success;
+    }
+
+    // ---------------- Task 3: resource activities ----------------
     ResourceManager &resources = getResourceManager();
     Resource *target = resources.find(record.resourceId);
     if (target == nullptr)
@@ -462,7 +544,6 @@ bool ActivityManager::applyReversal(const ActivityRecord &record, string &err)
     }
 
     undoing = true;
-    bool success = false;
     if (record.action == "REGISTER")
     {
         // Undo a registration = remove the resource (fails if it is occupied).
@@ -493,7 +574,8 @@ bool ActivityManager::reverseActivity(ActivityNode *node, string &message, strin
         err = "Activity " + number + " has already been reversed (" + record.undoneTime + ").";
     else if (!isReversible(record.action))
         err = "Activity " + number + " (" + record.action + ") cannot be reversed. "
-              "Only REGISTER and STATUS activities can be undone at the moment.";
+              "Only resource REGISTER / STATUS and parcel register / route / status / missing / cancel "
+              "activities can be undone at the moment.";
     else if (node != latest)
         err = "Only the most recent activity that is not yet reversed (No. " +
               to_string(latest->data.sequence) + ") can be undone first.";
@@ -505,8 +587,14 @@ bool ActivityManager::reverseActivity(ActivityNode *node, string &message, strin
         if (record.action == "REGISTER")
             message = "Activity " + number + " reversed: resource " + record.resourceId +
                       " has been removed.";
-        else
+        else if (record.action == "STATUS")
             message = "Activity " + number + " reversed: " + record.resourceId + " restored from " +
+                      record.newStatus + " to " + record.previousStatus + ".";
+        else if (record.action == "PARCEL_REGISTER")
+            message = "Activity " + number + " reversed: parcel " + record.itemId +
+                      " has been removed.";
+        else
+            message = "Activity " + number + " reversed: parcel " + record.itemId + " restored from " +
                       record.newStatus + " to " + record.previousStatus + ".";
         return true;
     }

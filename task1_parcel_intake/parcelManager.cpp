@@ -348,7 +348,10 @@ bool ParcelManager::restoreStatus(const std::string &parcelId,
         error = "Invalid status to restore.";
         return false;
     }
-    applyStatus(*p, oldStatus, "PARCEL_UNDO", false);
+    // notify = true so the integrated system (main.cpp) can keep the parcel tree
+    // in step after an undo. Task 4 ignores this PARCEL_UNDO event while it is
+    // undoing, so the undo is not recorded as a new activity.
+    applyStatus(*p, oldStatus, "PARCEL_UNDO", true);
     return true;
 }
 

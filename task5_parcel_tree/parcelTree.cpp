@@ -1,6 +1,5 @@
 #include "parcelTree.hpp"
 #include "../common/Utils.hpp"
-#include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <iomanip>
@@ -16,16 +15,20 @@ namespace {
 
 const char* tree_PARCEL_FILE = "data/parcels.txt";
 
-const int tree_NUM_STATUSES = 11;
-const char* tree_VALID_STATUSES[tree_NUM_STATUSES] = {
+// Plain arrays (the brief does not allow STL containers such as vector).
+// The status list covers every status Task 1 can produce, so a parcel
+// registered or routed in Task 1 can always be stored in the tree.
+const int tree_STATUS_COUNT = 13;
+const std::string tree_VALID_STATUSES[tree_STATUS_COUNT] = {
     "Pending", "Registered", "Sorted", "Processing", "Ready for Collection",
-    "Out for Delivery", "Completed", "Returned", "Missing", "Cancelled", "Special Handling"};
+    "Out for Delivery", "Special Handling", "Return Pending", "On Hold",
+    "Completed", "Returned", "Missing", "Cancelled"};
 
-const int tree_NUM_CATEGORIES = 5;
-const char* tree_VALID_CATEGORIES[tree_NUM_CATEGORIES] = {
+const int tree_CATEGORY_COUNT = 5;
+const std::string tree_VALID_CATEGORIES[tree_CATEGORY_COUNT] = {
     "Standard Parcel", "Fragile Box", "Document", "Electronics", "Clothing"};
 
-std::string tree_cleanText(const std::string& s) {          // trim whitespace / CR
+std::string tree_cleanText(const std::string& s) {           // trim whitespace / CR
     size_t a = s.find_first_not_of(" \t\r\n");
     if (a == std::string::npos) return "";
     size_t b = s.find_last_not_of(" \t\r\n");
@@ -33,22 +36,21 @@ std::string tree_cleanText(const std::string& s) {          // trim whitespace /
 }
 
 std::string tree_upperCopy(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(),
-                   [](unsigned char c) { return std::toupper(c); });
+    for (size_t i = 0; i < s.size(); ++i)
+        s[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(s[i])));
     return s;
 }
 
 std::string tree_lowerCopy(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    for (size_t i = 0; i < s.size(); ++i)
+        s[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(s[i])));
     return s;
 }
 
 // Returns the canonical spelling from a list (case-insensitive), or "" if absent.
-std::string tree_canonicalFrom(const char* list[], int size, const std::string& value) {
-    for (int i = 0; i < size; ++i) {
+std::string tree_canonicalFrom(const std::string list[], int count, const std::string& value) {
+    for (int i = 0; i < count; ++i)
         if (tree_lowerCopy(list[i]) == tree_lowerCopy(tree_cleanText(value))) return list[i];
-    }
     return "";
 }
 
@@ -72,12 +74,13 @@ std::string tree_askValidated(const std::string& prompt, Validator ok, const std
 }
 
 // Numbered pick-list. minChoice = 0 allows "keep current" on update.
-std::string tree_chooseFromList(const std::string& title, const char* list[], int size, bool allowKeep) {
+std::string tree_chooseFromList(const std::string& title, const std::string list[], int count,
+                           bool allowKeep) {
     std::cout << title << "\n";
     if (allowKeep) std::cout << "  0. (keep current)\n";
-    for (int i = 0; i < size; ++i)
+    for (int i = 0; i < count; ++i)
         std::cout << "  " << (i + 1) << ". " << list[i] << "\n";
-    int c = common::readInt("  Select: ", allowKeep ? 0 : 1, size);
+    int c = common::readInt("  Select: ", allowKeep ? 0 : 1, count);
     return c == 0 ? "" : list[c - 1];
 }
 
@@ -96,9 +99,9 @@ void tree_printTableHeader() {
               << std::setw(18) << "Recipient"
               << std::setw(17) << "Category"
               << std::setw(18) << "Arrived"
-              << std::setw(12) << "Status"
+              << std::setw(22) << "Status"
               << "Location\n"
-              << std::string(100, '-') << "\n";
+              << std::string(110, '-') << "\n";
 }
 
 void tree_printTableRow(const Parcel& p) {
@@ -108,7 +111,7 @@ void tree_printTableRow(const Parcel& p) {
               << std::setw(18) << p.recipientName.substr(0, 17)
               << std::setw(17) << p.parcelType.substr(0, 16)
               << std::setw(18) << p.arrivalDateTime
-              << std::setw(12) << p.status.substr(0, 11)
+              << std::setw(22) << p.status.substr(0, 21)
               << p.deliveryInfo << "\n";
 }
 
@@ -136,29 +139,36 @@ int  ParcelTree::getHeight() const { return height(root); }
 
 int ParcelTree::height(const ParcelNode* node) const {
     if (!node) return 0;
-    return 1 + std::max(height(node->left), height(node->right));
+    int leftHeight = height(node->left);
+    int rightHeight = height(node->right);
+    return 1 + (leftHeight > rightHeight ? leftHeight : rightHeight);
 }
 
 // =====================================================================
 //  Validation
 // =====================================================================
-bool ParcelTree::isValidParcelId(const std::string& id) {          // PCL + 3 digits
-    if (id.size() != 6 || id.compare(0, 3, "PCL") != 0) return false;
-    return std::all_of(id.begin() + 3, id.end(), [](unsigned char c) { return std::isdigit(c); });
+bool ParcelTree::isValidParcelId(const std::string& id) {           // PCL + 3 or more digits
+    if (id.size() < 6 || id.size() > 12 || id.compare(0, 3, "PCL") != 0) return false;
+    for (size_t i = 3; i < id.size(); ++i)
+        if (!std::isdigit(static_cast<unsigned char>(id[i]))) return false;
+    return true;
 }
 
-bool ParcelTree::isValidRecipientId(const std::string& id) {        // TP + 6 digits
-    if (id.size() != 8 || id.compare(0, 2, "TP") != 0) return false;
-    return std::all_of(id.begin() + 2, id.end(), [](unsigned char c) { return std::isdigit(c); });
+// Same rule as Task 1 (students "TP012345" and staff IDs): 5-12 letters/digits.
+bool ParcelTree::isValidRecipientId(const std::string& id) {
+    if (id.size() < 5 || id.size() > 12) return false;
+    for (size_t i = 0; i < id.size(); ++i)
+        if (!std::isalnum(static_cast<unsigned char>(id[i]))) return false;
+    return true;
 }
 
-bool ParcelTree::isValidDateTime(const std::string& dt) {          // YYYY-MM-DD HH:MM
+bool ParcelTree::isValidDateTime(const std::string& dt) {           // YYYY-MM-DD HH:MM
     if (dt.size() != 16) return false;
     for (int i = 0; i < 16; ++i) {
         bool sep = (i == 4 || i == 7) ? dt[i] == '-' :
-                   (i == 10)         ? dt[i] == ' ' :
-                   (i == 13)         ? dt[i] == ':' :
-                                     std::isdigit(static_cast<unsigned char>(dt[i])) != 0;
+                   (i == 10)          ? dt[i] == ' ' :
+                   (i == 13)          ? dt[i] == ':' :
+                                        std::isdigit(static_cast<unsigned char>(dt[i])) != 0;
         if (!sep) return false;
     }
     int month = std::stoi(dt.substr(5, 2)),  day = std::stoi(dt.substr(8, 2));
@@ -167,16 +177,16 @@ bool ParcelTree::isValidDateTime(const std::string& dt) {          // YYYY-MM-DD
 }
 
 bool ParcelTree::isValidStatus(const std::string& status) {
-    return !tree_canonicalFrom(tree_VALID_STATUSES, tree_NUM_STATUSES, status).empty();
+    return !tree_canonicalFrom(tree_VALID_STATUSES, tree_STATUS_COUNT, status).empty();
 }
 
 bool ParcelTree::isValidCategory(const std::string& category) {
-    return !tree_canonicalFrom(tree_VALID_CATEGORIES, tree_NUM_CATEGORIES, category).empty();
+    return !tree_canonicalFrom(tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, category).empty();
 }
 
 bool ParcelTree::validateParcel(const Parcel& p, std::string& error) {
-    if (!isValidParcelId(p.parcelID))         { error = "Invalid Parcel ID (expected PCL + 3 digits, e.g. PCL001)."; return false; }
-    if (!isValidRecipientId(p.recipientID))   { error = "Invalid Recipient ID (expected TP + 6 digits, e.g. TP012345)."; return false; }
+    if (!isValidParcelId(p.parcelID))         { error = "Invalid Parcel ID (expected PCL + digits, e.g. PCL001)."; return false; }
+    if (!isValidRecipientId(p.recipientID))   { error = "Invalid Recipient ID (5-12 letters/digits, e.g. TP012345)."; return false; }
     if (tree_cleanText(p.recipientName).empty())   { error = "Recipient name cannot be empty."; return false; }
     if (!isValidCategory(p.parcelType))       { error = "Invalid parcel category '" + p.parcelType + "'."; return false; }
     if (!isValidDateTime(p.arrivalDateTime))  { error = "Invalid arrival date/time (expected YYYY-MM-DD HH:MM)."; return false; }
@@ -209,12 +219,10 @@ InsertResult ParcelTree::insertParcel(const Parcel& input) {
     p.recipientName = tree_cleanText(p.recipientName);
     p.arrivalDateTime = tree_cleanText(p.arrivalDateTime);
     p.deliveryInfo  = tree_cleanText(p.deliveryInfo);
-    
-    std::string canonicalCat = tree_canonicalFrom(tree_VALID_CATEGORIES, tree_NUM_CATEGORIES, p.parcelType);
-    p.parcelType    = canonicalCat.empty() ? p.parcelType : canonicalCat;
-
-    std::string canonicalStatus = tree_canonicalFrom(tree_VALID_STATUSES, tree_NUM_STATUSES, p.status);
-    p.status        = canonicalStatus.empty() ? p.status : canonicalStatus;
+    std::string canonicalType = tree_canonicalFrom(tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, p.parcelType);
+    if (!canonicalType.empty()) p.parcelType = canonicalType;
+    std::string canonicalStatus = tree_canonicalFrom(tree_VALID_STATUSES, tree_STATUS_COUNT, p.status);
+    if (!canonicalStatus.empty()) p.status = canonicalStatus;
 
     std::string err;
     if (!validateParcel(p, err)) return InsertResult::INVALID;
@@ -349,12 +357,12 @@ ParcelNode* ParcelTree::deleteNode(ParcelNode* node, const std::string& parcelId
         node->right = deleteNode(node->right, parcelId, success);
     } else {
         success = true;
-        if (!node->left) {                     // leaf or only right child
+        if (!node->left) {                       // leaf or only right child
             ParcelNode* child = node->right;
             delete node;
             return child;
         }
-        if (!node->right) {                    // only left child
+        if (!node->right) {                      // only left child
             ParcelNode* child = node->left;
             delete node;
             return child;
@@ -378,11 +386,12 @@ bool ParcelTree::deleteParcel(const std::string& parcelId) {
 // =====================================================================
 //  File import
 // =====================================================================
-// Imports one parcel (targetId) or all parcels (targetId empty) from parcels.txt
-static void tree_importFromFile(ParcelTree& tree, const std::string& targetId) {
+// Imports one parcel (targetId) or all parcels (targetId empty) from parcels.txt.
+// quiet = true prints nothing (used for the automatic load when the program starts).
+static void tree_importFromFile(ParcelTree& tree, const std::string& targetId, bool quiet = false) {
     std::ifstream file(tree_PARCEL_FILE);
     if (!file.is_open()) {
-        std::cout << "[!] Could not open " << tree_PARCEL_FILE << "\n";
+        if (!quiet) std::cout << "[!] Could not open " << tree_PARCEL_FILE << "\n";
         return;
     }
 
@@ -394,23 +403,25 @@ static void tree_importFromFile(ParcelTree& tree, const std::string& targetId) {
         line = tree_cleanText(line);
         if (line.empty()) continue;
 
-        std::string fields[7];
+        // Split the line at '|' into exactly 7 fields (a plain array, no vector).
+        const int FIELD_COUNT = 7;
+        std::string f[FIELD_COUNT];
         int fieldCount = 0;
         size_t start = 0, pos;
-        while ((pos = line.find('|', start)) != std::string::npos && fieldCount < 7) {
-            fields[fieldCount++] = tree_cleanText(line.substr(start, pos - start));
+        while ((pos = line.find('|', start)) != std::string::npos) {
+            if (fieldCount < FIELD_COUNT) f[fieldCount] = tree_cleanText(line.substr(start, pos - start));
+            ++fieldCount;
             start = pos + 1;
         }
-        if (fieldCount < 7) {
-            fields[fieldCount++] = tree_cleanText(line.substr(start));
-        }
+        if (fieldCount < FIELD_COUNT) f[fieldCount] = tree_cleanText(line.substr(start));
+        ++fieldCount;
 
-        if (fieldCount != 7) { ++invalid; continue; }   // malformed line
+        if (fieldCount != FIELD_COUNT) { ++invalid; continue; }   // malformed line
 
-        if (!targetId.empty() && tree_upperCopy(fields[0]) != targetId) continue;
+        if (!targetId.empty() && tree_upperCopy(f[0]) != targetId) continue;
         foundTarget = true;
 
-        Parcel p{fields[0], fields[1], fields[2], fields[3], fields[4], fields[5], fields[6]};
+        Parcel p{f[0], f[1], f[2], f[3], f[4], f[5], f[6]};
         switch (tree.insertParcel(p)) {
             case InsertResult::INSERTED:  ++inserted;   break;
             case InsertResult::DUPLICATE: ++duplicates; break;
@@ -419,6 +430,7 @@ static void tree_importFromFile(ParcelTree& tree, const std::string& targetId) {
         if (!targetId.empty()) break;
     }
 
+    if (quiet) return;
     if (!targetId.empty() && !foundTarget) {
         std::cout << "[!] Parcel ID '" << targetId << "' was not found in " << tree_PARCEL_FILE << ".\n";
         return;
@@ -426,6 +438,21 @@ static void tree_importFromFile(ParcelTree& tree, const std::string& targetId) {
     std::cout << "Import finished: " << inserted << " inserted, "
               << duplicates << " duplicate(s) skipped, "
               << invalid << " invalid record(s) skipped.\n";
+}
+
+// =====================================================================
+//  Shared instance + loader used by the integrated system
+// =====================================================================
+// One tree for the whole program, so Task 1 (parcel intake) and Task 4 (undo)
+// can keep it up to date and the menu always shows the same records.
+ParcelTree& getParcelTree() {
+    static ParcelTree tree;
+    return tree;
+}
+
+// Loads every record of data/parcels.txt into the tree (no messages).
+void treeLoadParcelsFromFile(ParcelTree& tree) {
+    tree_importFromFile(tree, "", true);
 }
 
 // =====================================================================
@@ -438,7 +465,7 @@ static void tree_insertManually(ParcelTree& tree) {
     p.parcelID = tree_upperCopy(tree_askValidated(
         "Parcel ID (e.g. PCL009)      : ",
         [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by 3 digits."));
+        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
     if (p.parcelID.empty()) return;
 
     if (tree.searchParcel(p.parcelID)) {
@@ -449,16 +476,16 @@ static void tree_insertManually(ParcelTree& tree) {
     p.recipientID = tree_upperCopy(tree_askValidated(
         "Recipient ID (e.g. TP012345) : ",
         [](const std::string& s) { return ParcelTree::isValidRecipientId(tree_upperCopy(s)); },
-        "Invalid Recipient ID. Use TP followed by 6 digits."));
+        "Invalid Recipient ID. Use 5-12 letters/digits, e.g. TP012345."));
     p.recipientName = tree_askValidated(
         "Recipient name               : ",
         [](const std::string& s) { return !s.empty(); },
         "Recipient name cannot be empty.");
-    p.parcelType = tree_chooseFromList("Parcel category:", tree_VALID_CATEGORIES, tree_NUM_CATEGORIES, false);
+    p.parcelType = tree_chooseFromList("Parcel category:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, false);
     p.arrivalDateTime = tree_askValidated(
         "Arrival (YYYY-MM-DD HH:MM)   : ", ParcelTree::isValidDateTime,
         "Invalid date/time. Example: 2026-10-16 09:00");
-    p.status = tree_chooseFromList("Status:", tree_VALID_STATUSES, tree_NUM_STATUSES, false);
+    p.status = tree_chooseFromList("Status:", tree_VALID_STATUSES, tree_STATUS_COUNT, false);
     p.deliveryInfo = tree_askValidated(
         "Location / delivery info     : ",
         [](const std::string& s) { return !s.empty(); },
@@ -486,7 +513,7 @@ static void tree_insertMenu(ParcelTree& tree) {
         std::string id = tree_upperCopy(tree_askValidated(
             "Parcel ID to import (e.g. PCL001): ",
             [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-            "Invalid Parcel ID. Use PCL followed by 3 digits."));
+            "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
         if (!id.empty()) tree_importFromFile(tree, id);
     } else if (c == 3) tree_importFromFile(tree, "");
 }
@@ -504,13 +531,13 @@ static void tree_searchMenu(ParcelTree& tree) {
         std::string id = tree_upperCopy(tree_askValidated(
             "Parcel ID to search: ",
             [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-            "Invalid Parcel ID. Use PCL followed by 3 digits."));
+            "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
         if (id.empty()) return;
         Parcel* p = tree.searchParcel(id);
         if (p) { std::cout << "\n[OK] Parcel found:"; tree_printTableHeader(); tree_printTableRow(*p); }
         else   std::cout << "\n[!] Parcel " << id << " does not exist in the tree.\n";
     } else if (c == 2) {
-        std::string cat = tree_chooseFromList("Select category to search:", tree_VALID_CATEGORIES, tree_NUM_CATEGORIES, false);
+        std::string cat = tree_chooseFromList("Select category to search:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, false);
         int n = tree.searchByCategory(cat);
         if (n == 0) std::cout << "\n[!] No parcels found in category '" << cat << "'.\n";
         else        std::cout << "\n[OK] " << n << " parcel(s) found in category '" << cat << "'.\n";
@@ -538,7 +565,7 @@ static void tree_updateRecord(ParcelTree& tree) {
     std::string id = tree_upperCopy(tree_askValidated(
         "Parcel ID to update: ",
         [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by 3 digits."));
+        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
     if (id.empty()) return;
 
     Parcel* cur = tree.searchParcel(id);
@@ -552,10 +579,10 @@ static void tree_updateRecord(ParcelTree& tree) {
     std::string name = tree_askText("New recipient name [" + cur->recipientName + "]: ");
     if (!name.empty()) updated.recipientName = name;
 
-    std::string cat = tree_chooseFromList("New category:", tree_VALID_CATEGORIES, tree_NUM_CATEGORIES, true);
+    std::string cat = tree_chooseFromList("New category:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, true);
     if (!cat.empty()) updated.parcelType = cat;
 
-    std::string st = tree_chooseFromList("New status:", tree_VALID_STATUSES, tree_NUM_STATUSES, true);
+    std::string st = tree_chooseFromList("New status:", tree_VALID_STATUSES, tree_STATUS_COUNT, true);
     if (!st.empty()) updated.status = st;
 
     std::string loc = tree_askText("New location/info [" + cur->deliveryInfo + "]: ");
@@ -575,7 +602,7 @@ static void tree_deleteRecord(ParcelTree& tree) {
     std::string id = tree_upperCopy(tree_askValidated(
         "Parcel ID to delete: ",
         [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by 3 digits."));
+        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
     if (id.empty()) return;
 
     Parcel* p = tree.searchParcel(id);
@@ -596,7 +623,7 @@ static void tree_deleteRecord(ParcelTree& tree) {
 //  Main module menu (called from main.cpp)
 // =====================================================================
 void treeMenu() {
-    static ParcelTree tree;     // static: records survive leaving and re-entering the menu
+    ParcelTree& tree = getParcelTree();   // shared tree: records survive leaving the menu
     int choice = -1;
 
     do {

@@ -15,11 +15,14 @@
 //    1. RECORD   activities coming from other modules
 //                  - Task 3 (resources) is connected through the hook
 //                    getResourceManager().setActivityLogger(...)
-//                  - Task 1 / Task 2 call recordActivity() directly
+//                  - Task 1 (parcels) and Task 2 (requests) are connected in
+//                    main.cpp through their own setActivityLogger() hooks,
+//                    which forward every event to record()
 //    2. DISPLAY  recent activities, the history of one parcel/request/
 //                resource ID, and the most recent activity
 //    3. UNDO     the most recent activity that is allowed to be reversed
-//                (currently REGISTER and STATUS, see isReversible)
+//                (resource REGISTER/STATUS and parcel register/route/status/
+//                 missing/cancel, see isReversible)
 //    4. SAVE     the history to data/activities.txt so it survives restarts
 //
 //  Undo rule (LIFO): only the NEWEST activity that has not yet been

@@ -451,6 +451,51 @@ bool RequestManager::processNextRequest(string &error)
     return true;
 }
 
+const ServiceRequest *RequestManager::findRequest(const string &requestID) const
+{
+    RequestNode *node = findNode(requestID);
+    return node == nullptr ? nullptr : &node->request;
+}
+
+// Copies the request at the front of the priority queue (not removed).
+bool RequestManager::peekNextRequest(ServiceRequest &result) const
+{
+    RequestNode *next = priorityQueue.peek();
+    if (next == nullptr)
+        return false;
+    result = next->request;
+    return true;
+}
+
+// Processes ONE chosen Pending request (brief 2.4: "process a selected request").
+// It leaves the priority queue and becomes Processing, exactly like processNextRequest().
+bool RequestManager::processRequestById(const string &requestID, string &error)
+{
+    RequestNode *node = findNode(requestID);
+    if (node == nullptr)
+    {
+        error = "Request ID was not found.";
+        return false;
+    }
+    if (node->request.status != "Pending")
+    {
+        error = "Only a Pending request can be processed (current status: " + node->request.status + ").";
+        return false;
+    }
+
+    priorityQueue.remove(node);
+    node->request.status = "Processing";
+    if (!save(error))
+    {
+        node->request.status = "Pending";
+        priorityQueue.enqueue(node);
+        return false;
+    }
+
+    logActivity("PROCESS_REQUEST", node->request.requestID + "|" + node->request.parcelID);
+    return true;
+}
+
 bool RequestManager::cancelRequest(const string &requestID, string &error)
 {
     RequestNode *node = findNode(requestID);
@@ -514,9 +559,16 @@ bool RequestManager::finishProcessingRequest(const string &requestID,
     return true;
 }
 
+// Shared instance (created on first use).
+RequestManager &getRequestManager()
+{
+    static RequestManager manager;
+    return manager;
+}
+
 void requestMenu()
 {
-    RequestManager requests;
+    RequestManager &requests = getRequestManager();
     while (true)
     {
         cout << "\n--- SERVICE REQUESTS ---\n"

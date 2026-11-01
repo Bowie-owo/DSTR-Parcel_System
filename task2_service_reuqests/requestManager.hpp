@@ -47,6 +47,11 @@ public:
     bool displayRequest(const std::string &requestID) const;
     bool displayNextRequest() const;
     bool processNextRequest(std::string &error);
+
+    // Used by the integrated system (workflow demo, Task 4 history, parcel updates).
+    const ServiceRequest *findRequest(const std::string &requestID) const; // nullptr if absent
+    bool peekNextRequest(ServiceRequest &result) const;                    // highest-priority Pending
+    bool processRequestById(const std::string &requestID, std::string &error); // "process a selected request"
     bool cancelRequest(const std::string &requestID, std::string &error);
     bool finishProcessingRequest(const std::string &requestID,
                                  const std::string &finalStatus,
@@ -55,5 +60,9 @@ public:
     static bool isValidServiceType(const std::string &serviceType);
     static bool isValidStatus(const std::string &status);
 };
+
+// One shared RequestManager for the whole program, so the menu, the workflow
+// demo and the activity-history hook all work on the same data.
+RequestManager &getRequestManager();
 
 void requestMenu();
