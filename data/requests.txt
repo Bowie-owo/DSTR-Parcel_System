@@ -6,3 +6,5 @@ REQ005|PCL005|TP056789|Nurul Huda|Re-delivery|2026-10-16 10:30|Processing
 REQ006|PCL006|TP067890|Kevin Ong|Recipient Collection|2026-10-16 10:48|Completed
 REQ007|PCL007|TP078901|Sarah Lee|Campus Delivery|2026-10-16 11:02|Cancelled
 REQ008|PCL008|TP089012|Ahmad Faris|Return to Sender|2026-10-16 11:20|Returned
+REQ009|PCL011|TP076486|Bowie Chong|Campus Delivery|2026-11-01 09:33|Cancelled
+REQ010|PCL012|TP099999|Lai Sin Yi|Campus Delivery|2026-11-01 09:36|Processing

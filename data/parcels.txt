@@ -6,4 +6,6 @@ PCL005|TP056789|Nurul Huda|Clothing|2026-10-16 10:15|Out for Delivery|Block B Le
 PCL006|TP067890|Kevin Ong|Standard Parcel|2026-10-16 10:30|Completed|Library Foyer
 PCL008|TP089012|Ahmad Faris|Document|2026-10-16 11:10|Returned|Security Office
 PCL009|TP077477|Zhilin|Standard Parcel|2026-10-30 18:10|Cancelled|Block A Lobby
-PCL010|TP077414|Ming Cyn|Fragile Box|2026-10-30 18:17|Pending|Block B Lobby
+PCL010|TP077414|Ming Cyn|Fragile Box|2026-10-30 18:17|Ready for Collection|Block B Lobby
+PCL011|TP076486|Bowie Chong|Standard Parcel|2026-11-01 09:31|Out for Delivery|Block C Lobby
+PCL012|TP099999|Lai Sin Yi|Fragile Box|2026-11-01 09:36|Out for Delivery|Block D Lobby
