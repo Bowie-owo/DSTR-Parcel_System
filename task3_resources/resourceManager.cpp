@@ -11,6 +11,8 @@
 //    6. Menu                                 (resourceMenu)
 // =====================================================================
 #include "resourceManager.hpp"
+#include "../task1_parcel_intake/parcelManager.hpp"
+#include "../task2_service_reuqests/requestManager.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -67,12 +69,56 @@ bool parseRecord(const string &line, Resource &record)
         transactionText.find_first_not_of("0123456789") != string::npos)
         return false;
 
+    // Bound the value before conversion to avoid overflow from malformed files.
+    if (transactionText.size() > 6)
+        return false;
     record.transactions = stoi(transactionText);
 
     // An Occupied resource must hold an item; any other status must not.
     bool isOccupied = (record.status == STATUS_OCCUPIED);
     bool holdsItem = (record.currentItem != NO_ITEM);
     return isOccupied == holdsItem;
+}
+
+// Enforce that the resource type is appropriate for the parcel's next action.
+bool resourceCanHandle(const Resource &resource, const string &itemId, string &error)
+{
+    if (itemId.rfind("REQ", 0) == 0)
+    {
+        const ServiceRequest *request = getRequestManager().findRequest(itemId);
+        if (!request) { error = "Request ID does not exist."; return false; }
+        if (request->status != "Pending" && request->status != "Processing")
+        { error = "Only Pending or Processing requests can be assigned."; return false; }
+
+        const string &service = request->serviceType;
+        bool compatible =
+            (service == "Recipient Collection" && resource.type == TYPE_NAMES[0]) ||
+            ((service == "Campus Delivery" || service == "Re-delivery" || service == "Return to Sender") &&
+             (resource.type == TYPE_NAMES[1] || resource.type == TYPE_PERSONNEL)) ||
+            (service == "Special Handling" && resource.type == TYPE_NAMES[2]);
+        if (!compatible)
+        {
+            error = "Resource type '" + resource.type + "' is not suitable for '" + service + "'.";
+            return false;
+        }
+        return true;
+    }
+
+    if (itemId.rfind("PCL", 0) == 0)
+    {
+        const Parcel *parcel = getParcelManager().findParcel(itemId);
+        if (!parcel) { error = "Parcel ID does not exist."; return false; }
+        if (parcel->status == parcelDefs::ST_READY && resource.type == TYPE_NAMES[0]) return true;
+        if (parcel->status == parcelDefs::ST_OUT &&
+            (resource.type == TYPE_NAMES[1] || resource.type == TYPE_PERSONNEL)) return true;
+        if (parcel->status == parcelDefs::ST_SPECIAL && resource.type == TYPE_NAMES[2]) return true;
+        if (parcel->status == parcelDefs::ST_RETURN_PENDING &&
+            (resource.type == TYPE_NAMES[1] || resource.type == TYPE_PERSONNEL)) return true;
+        error = "Resource type '" + resource.type + "' is not suitable for parcel status '" + parcel->status + "'.";
+        return false;
+    }
+    error = "Assignment ID must be a registered PCL or REQ identifier.";
+    return false;
 }
 } // namespace
 
@@ -361,6 +407,8 @@ bool ResourceManager::assign(const string &resId, const string &itemIdInput, str
         err = "Resource is not available (current status: " + target->status + ").";
     else if (holder != nullptr) // duplicate active assignment
         err = itemId + " is already assigned to " + holder->id + ".";
+    else if (!resourceCanHandle(*target, itemId, err))
+        return false;
     else
     {
         target->status = STATUS_OCCUPIED;

@@ -1,5 +1,5 @@
 // =====================================================================
-//  common/Resource.hpp
+//  common/resource.hpp
 //  Resource struct shared by all modules (no data structure here), plus
 //  the valid resource types / statuses and tiny one-line checks.
 // =====================================================================

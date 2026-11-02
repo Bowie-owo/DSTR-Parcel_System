@@ -2,20 +2,20 @@
 //  parcelManager.hpp - Task 1: Parcel Intake, Sorting and Processing
 //  Combines ParcelList (all records) + ParcelQueue (waiting to be
 //  processed) and exposes an API the other tasks can call.
-//  Uses the shared Parcel struct (common/Parcel.hpp) and the shared
+//  Uses the shared Parcel struct (common/parcel.hpp) and the shared
 //  data file data/parcels.txt.
 // =====================================================================
 #ifndef PARCEL_MANAGER_HPP
 #define PARCEL_MANAGER_HPP
 
 #include <string>
-#include "../common/Parcel.hpp"
+#include "../common/parcel.hpp"
 #include "../common/Utils.hpp"   // common::ActivityLogger
 #include "parcelQueue.hpp"   // ParcelList + ParcelQueue
 
 // ---------------------------------------------------------------------
 //  Status / type strings stored in data/parcels.txt (same style as
-//  resourceDefs in Resource.hpp). "Pending", "Processing", "Completed",
+//  resourceDefs in resource.hpp). "Pending", "Processing", "Completed",
 //  "Cancelled" and "Returned" match the existing data file.
 // ---------------------------------------------------------------------
 namespace parcelDefs
@@ -106,6 +106,9 @@ public:
     bool updateStatus(const std::string &parcelId, const std::string &newStatus,
                       const std::string &action, std::string &error);
     bool removeRecord(const std::string &parcelId, std::string &error);
+    bool updateDetails(const std::string &parcelId, const std::string &recipientName,
+                       const std::string &recipientID, const std::string &parcelType,
+                       const std::string &deliveryInfo, std::string &error);
 
     // For Task 4 undo: force a previous status back (no activity logged).
     bool restoreStatus(const std::string &parcelId, const std::string &oldStatus,

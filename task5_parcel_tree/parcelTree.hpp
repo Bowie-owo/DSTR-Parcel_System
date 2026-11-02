@@ -2,7 +2,7 @@
 #define PARCEL_TREE_HPP
 
 #include <string>
-#include "../common/Parcel.hpp"
+#include "../common/parcel.hpp"
 
 // Node of the Binary Search Tree (key = Parcel ID)
 struct ParcelNode {

@@ -307,15 +307,19 @@ void runWorkflowDemo()
              << " Recipient Collection; equal priority -> oldest request first.\n"
              << " The queue would hand out " << next.requestID << " (" << next.serviceType << ") first.\n";
         if (next.requestID != request.requestID)
-            cout << " Your new request " << request.requestID << " waits behind it. For this demo we handle YOUR request now\n"
-                 << " (Service Requests > Process next request always follows the rule).\n";
+        {
+            cout << " The new request is not currently the highest-priority request.\n"
+                 << " Process the earlier request(s) first, then rerun the demo so the\n"
+                 << " workflow follows the required priority rule.\n";
+            return;
+        }
     }
-    if (!requests.processRequestById(request.requestID, err))
+    if (!requests.processNextRequest(err))
     {
         cout << " [Error] " << err << "\n Workflow stopped.\n";
         return;
     }
-    cout << " Task 2: request " << request.requestID << " is now Processing.\n";
+    cout << " Task 2: highest-priority request " << request.requestID << " is now Processing.\n";
     if (!demoContinue())
         return;
 

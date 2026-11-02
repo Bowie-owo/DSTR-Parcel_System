@@ -23,7 +23,7 @@
 #define PARCEL_INTAKE_QUEUE_HPP
 
 #include <string>
-#include "../common/Parcel.hpp"
+#include "../common/parcel.hpp"
 
 // ---------------------------------------------------------------------
 //  ParcelList - singly linked list of Parcel records

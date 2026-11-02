@@ -16,7 +16,7 @@
 
 #include <string>
 
-#include "../common/Resource.hpp"
+#include "../common/resource.hpp"
 
 class ResourceCircularQueue
 {

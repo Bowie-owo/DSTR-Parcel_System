@@ -334,6 +334,46 @@ bool ParcelManager::removeRecord(const std::string &parcelId, std::string &error
     return true;
 }
 
+bool ParcelManager::updateDetails(const std::string &parcelId,
+                                  const std::string &recipientNameInput,
+                                  const std::string &recipientIDInput,
+                                  const std::string &parcelTypeInput,
+                                  const std::string &deliveryInfoInput,
+                                  std::string &error)
+{
+    Parcel *p = findParcel(parcelId);
+    if (p == 0) { error = "Parcel does not exist."; return false; }
+    if (parcelIsFinalStatus(p->status))
+    { error = "Finalised parcels cannot have their details changed."; return false; }
+
+    Parcel updated = *p;
+    updated.recipientName = common::trim(recipientNameInput);
+    updated.recipientID = common::toUpper(common::trim(recipientIDInput));
+    updated.parcelType = common::trim(parcelTypeInput);
+    updated.deliveryInfo = common::trim(deliveryInfoInput);
+
+    if (!parcelValidName(updated.recipientName))
+    { error = "Invalid recipient name (2-50 letters and permitted punctuation)."; return false; }
+    if (!parcelValidRecipientId(updated.recipientID))
+    { error = "Invalid recipient ID (5-12 letters/digits)."; return false; }
+    if (!parcelValidType(updated.parcelType))
+    { error = "Invalid parcel type."; return false; }
+    if (!parcelValidDeliveryInfo(updated.deliveryInfo))
+    { error = "Invalid delivery information (1-60 characters, no '|')."; return false; }
+
+    Parcel previous = *p;
+    *p = updated;
+    if (!saveToFile())
+    {
+        *p = previous;
+        error = "Could not save the updated parcel record.";
+        return false;
+    }
+    if (hook)
+        hook("PARCEL_DETAILS_UPDATED", p->parcelID + "|" + p->status + "|" + p->status);
+    return true;
+}
+
 bool ParcelManager::restoreStatus(const std::string &parcelId,
                                   const std::string &oldStatus, std::string &error)
 {
@@ -694,6 +734,35 @@ static void parcelMenuQuickStatus(const std::string &target, const char *actionC
         std::cout << "\n[Error] " << err << "\n";
 }
 
+static void parcelMenuEditDetails()
+{
+    ParcelManager &pm = getParcelManager();
+    std::string id;
+    if (!parcelReadLine("\n Parcel ID to edit: ", id) || id.empty()) return;
+    Parcel *parcel = pm.findParcel(id);
+    if (parcel == 0) { std::cout << "[Error] Parcel does not exist.\n"; return; }
+    ParcelManager::displayDetails(*parcel);
+    std::cout << "Leave a field blank to keep its current value.\n";
+    std::string name, recipientId, type, location;
+    parcelReadLine(" New recipient name [" + parcel->recipientName + "]: ", name);
+    if (std::cin.eof()) return;
+    parcelReadLine(" New recipient ID [" + parcel->recipientID + "]: ", recipientId);
+    if (std::cin.eof()) return;
+    parcelReadLine(" New delivery info [" + parcel->deliveryInfo + "]: ", location);
+    if (std::cin.eof()) return;
+    type = common::pickFromList("New parcel type (or choose current type to keep):", PARCEL_TYPE_NAMES, PARCEL_TYPE_COUNT);
+    if (type.empty()) return;
+    if (name.empty()) name = parcel->recipientName;
+    if (recipientId.empty()) recipientId = parcel->recipientID;
+    if (location.empty()) location = parcel->deliveryInfo;
+    if (type == parcel->parcelType) { /* unchanged */ }
+    std::string error;
+    if (pm.updateDetails(id, name, recipientId, type, location, error))
+        std::cout << "\nParcel details updated successfully.\n";
+    else
+        std::cout << "\n[Error] " << error << "\n";
+}
+
 static void parcelMenuRemove()
 {
     ParcelManager &pm = getParcelManager();
@@ -726,9 +795,10 @@ void parcelManagerMenu()
                   << " 7. Report parcel missing\n"
                   << " 8. Cancel parcel\n"
                   << " 9. Remove parcel record\n"
+                  << "10. Edit parcel information\n"
                   << " 0. Back to main menu\n"
                   << "----------------------------------------------\n";
-        choice = common::readInt(" Enter choice: ", 0, 9);
+        choice = common::readInt(" Enter choice: ", 0, 10);
         if (std::cin.eof()) return;
 
         switch (choice)
@@ -742,6 +812,7 @@ void parcelManagerMenu()
         case 7: parcelMenuQuickStatus(ST_MISSING, "PARCEL_MISSING"); break;
         case 8: parcelMenuQuickStatus(ST_CANCELLED, "PARCEL_CANCEL"); break;
         case 9: parcelMenuRemove();                                  break;
+        case 10: parcelMenuEditDetails();                             break;
         }
     } while (choice != 0);
 }

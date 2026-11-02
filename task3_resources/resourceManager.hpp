@@ -3,7 +3,7 @@
 //  task3_resources/resourceManager.hpp
 //
 //  Files used by this module:
-//    ../common/Resource.hpp          Resource struct + types/statuses
+//    ../common/resource.hpp          Resource struct + types/statuses
 //    ../common/Utils.hpp             readInt, readYesNo, ... (shared)
 //    resourceCircularQueue.hpp/.cpp  hand-written circular queue
 //    resourceManager.hpp/.cpp        this class + resourceMenu()
@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include "../common/Resource.hpp"
+#include "../common/resource.hpp"
 #include "../common/Utils.hpp"
 #include "resourceCircularQueue.hpp"
 

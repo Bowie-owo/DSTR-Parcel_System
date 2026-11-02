@@ -1,4 +1,5 @@
 #include "parcelTree.hpp"
+#include "../task1_parcel_intake/parcelManager.hpp"
 #include "../common/Utils.hpp"
 #include <cctype>
 #include <fstream>
@@ -171,9 +172,16 @@ bool ParcelTree::isValidDateTime(const std::string& dt) {           // YYYY-MM-D
                                         std::isdigit(static_cast<unsigned char>(dt[i])) != 0;
         if (!sep) return false;
     }
-    int month = std::stoi(dt.substr(5, 2)),  day = std::stoi(dt.substr(8, 2));
+    int year  = std::stoi(dt.substr(0, 4));
+    int month = std::stoi(dt.substr(5, 2)), day = std::stoi(dt.substr(8, 2));
     int hour  = std::stoi(dt.substr(11, 2)), min = std::stoi(dt.substr(14, 2));
-    return month >= 1 && month <= 12 && day >= 1 && day <= 31 && hour <= 23 && min <= 59;
+    if (year < 2000 || month < 1 || month > 12 || hour > 23 || min > 59)
+        return false;
+    const int daysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    int maxDay = daysInMonth[month - 1];
+    bool leapYear = (year % 400 == 0) || (year % 4 == 0 && year % 100 != 0);
+    if (month == 2 && leapYear) maxDay = 29;
+    return day >= 1 && day <= maxDay;
 }
 
 bool ParcelTree::isValidStatus(const std::string& status) {
@@ -333,10 +341,15 @@ void ParcelTree::displayStructure() const {
 bool ParcelTree::updateParcel(const std::string& parcelId, const Parcel& d) {
     ParcelNode* found = search(root, tree_normaliseId(parcelId));
     if (!found) return false;
-    found->parcel.recipientName = d.recipientName;
-    found->parcel.parcelType    = d.parcelType;
-    found->parcel.status        = d.status;
-    found->parcel.deliveryInfo  = d.deliveryInfo;
+    Parcel candidate = found->parcel;
+    candidate.recipientID = tree_upperCopy(tree_cleanText(d.recipientID));
+    candidate.recipientName = tree_cleanText(d.recipientName);
+    candidate.parcelType = tree_canonicalFrom(tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, d.parcelType);
+    candidate.status = tree_canonicalFrom(tree_VALID_STATUSES, tree_STATUS_COUNT, d.status);
+    candidate.deliveryInfo = tree_cleanText(d.deliveryInfo);
+    std::string validationError;
+    if (!validateParcel(candidate, validationError)) return false;
+    found->parcel = candidate;
     return true;
 }
 
@@ -459,46 +472,34 @@ void treeLoadParcelsFromFile(ParcelTree& tree) {
 //  Menu handlers
 // =====================================================================
 static void tree_insertManually(ParcelTree& tree) {
-    std::cout << "\n--- INSERT NEW PARCEL RECORD ---\n";
+    std::cout << "\n--- REGISTER PARCEL (SHARED TASK 1 RECORD) ---\n";
     Parcel p;
-
-    p.parcelID = tree_upperCopy(tree_askValidated(
-        "Parcel ID (e.g. PCL009)      : ",
-        [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
-    if (p.parcelID.empty()) return;
-
-    if (tree.searchParcel(p.parcelID)) {
-        std::cout << "[!] Duplicate Parcel ID: " << p.parcelID << " already exists in the tree.\n";
-        return;
-    }
-
     p.recipientID = tree_upperCopy(tree_askValidated(
         "Recipient ID (e.g. TP012345) : ",
-        [](const std::string& s) { return ParcelTree::isValidRecipientId(tree_upperCopy(s)); },
-        "Invalid Recipient ID. Use 5-12 letters/digits, e.g. TP012345."));
+        [](const std::string& v) { return ParcelTree::isValidRecipientId(tree_upperCopy(v)); },
+        "Invalid Recipient ID. Use 5-12 letters/digits."));
+    if (p.recipientID.empty()) return;
     p.recipientName = tree_askValidated(
         "Recipient name               : ",
-        [](const std::string& s) { return !s.empty(); },
-        "Recipient name cannot be empty.");
+        [](const std::string& v) { return v.size() >= 2 && v.size() <= 50; },
+        "Recipient name must contain 2-50 characters.");
+    if (p.recipientName.empty()) return;
     p.parcelType = tree_chooseFromList("Parcel category:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, false);
-    p.arrivalDateTime = tree_askValidated(
-        "Arrival (YYYY-MM-DD HH:MM)   : ", ParcelTree::isValidDateTime,
-        "Invalid date/time. Example: 2026-10-16 09:00");
-    p.status = tree_chooseFromList("Status:", tree_VALID_STATUSES, tree_STATUS_COUNT, false);
+    if (p.parcelType.empty()) return;
     p.deliveryInfo = tree_askValidated(
         "Location / delivery info     : ",
-        [](const std::string& s) { return !s.empty(); },
-        "Location cannot be empty.");
+        [](const std::string& v) { return !v.empty() && v.size() <= 60 && v.find('|') == std::string::npos; },
+        "Location must contain 1-60 characters and cannot contain '|'.");
+    if (p.deliveryInfo.empty()) return;
 
-    switch (tree.insertParcel(p)) {
-        case InsertResult::INSERTED:  std::cout << "\n[OK] Parcel " << p.parcelID << " inserted.\n"; break;
-        case InsertResult::DUPLICATE: std::cout << "\n[!] Duplicate Parcel ID.\n"; break;
-        case InsertResult::INVALID: {
-            std::string err; ParcelTree::validateParcel(p, err);
-            std::cout << "\n[!] Invalid parcel information: " << err << "\n";
-        }
+    std::string error;
+    if (getParcelManager().registerParcel(p, error)) {
+        std::cout << "\n[OK] Parcel " << p.parcelID
+                  << " registered and inserted into the shared BST.\n";
+    } else {
+        std::cout << "\n[!] Registration failed: " << error << "\n";
     }
+    (void)tree; // the Task 1 integration hook updates this shared tree
 }
 
 static void tree_insertMenu(ParcelTree& tree) {
@@ -561,62 +562,55 @@ static void tree_displayMenu(ParcelTree& tree) {
 
 static void tree_updateRecord(ParcelTree& tree) {
     if (tree.isEmpty()) { std::cout << "\n[!] The parcel tree is empty. Nothing to update.\n"; return; }
-
     std::string id = tree_upperCopy(tree_askValidated(
         "Parcel ID to update: ",
-        [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
+        [](const std::string& v) { return ParcelTree::isValidParcelId(tree_upperCopy(v)); },
+        "Invalid Parcel ID. Use PCL followed by digits."));
     if (id.empty()) return;
+    Parcel* current = tree.searchParcel(id);
+    if (!current) { std::cout << "\n[!] Parcel " << id << " does not exist.\n"; return; }
 
-    Parcel* cur = tree.searchParcel(id);
-    if (!cur) { std::cout << "\n[!] Cannot update: Parcel " << id << " does not exist.\n"; return; }
+    std::cout << "\nCurrent record:"; tree_printTableHeader(); tree_printTableRow(*current);
+    std::cout << "\nLeave a field blank to keep its current value.\n";
+    Parcel updated = *current;
+    std::string value = tree_askText("New recipient name [" + current->recipientName + "]: ");
+    if (!value.empty()) updated.recipientName = value;
+    value = tree_askText("New recipient ID [" + current->recipientID + "]: ");
+    if (!value.empty()) updated.recipientID = tree_upperCopy(value);
+    std::string category = tree_chooseFromList("New category:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, true);
+    if (!category.empty()) updated.parcelType = category;
+    value = tree_askText("New location/info [" + current->deliveryInfo + "]: ");
+    if (!value.empty()) updated.deliveryInfo = value;
 
-    std::cout << "\nCurrent record:"; tree_printTableHeader(); tree_printTableRow(*cur);
-    std::cout << "\n(Parcel ID is the tree key and cannot be changed. Leave blank / choose 0 to keep a value.)\n";
-
-    Parcel updated = *cur;
-
-    std::string name = tree_askText("New recipient name [" + cur->recipientName + "]: ");
-    if (!name.empty()) updated.recipientName = name;
-
-    std::string cat = tree_chooseFromList("New category:", tree_VALID_CATEGORIES, tree_CATEGORY_COUNT, true);
-    if (!cat.empty()) updated.parcelType = cat;
-
-    std::string st = tree_chooseFromList("New status:", tree_VALID_STATUSES, tree_STATUS_COUNT, true);
-    if (!st.empty()) updated.status = st;
-
-    std::string loc = tree_askText("New location/info [" + cur->deliveryInfo + "]: ");
-    if (!loc.empty()) updated.deliveryInfo = loc;
-
-    if (tree.updateParcel(id, updated)) {
-        std::cout << "\n[OK] Parcel " << id << " updated:";
-        tree_printTableHeader(); tree_printTableRow(*tree.searchParcel(id));
+    std::string error;
+    if (getParcelManager().updateDetails(id, updated.recipientName, updated.recipientID,
+                                         updated.parcelType, updated.deliveryInfo, error)) {
+        std::cout << "\n[OK] Shared parcel record and BST updated.\n";
+        Parcel* refreshed = tree.searchParcel(id);
+        if (refreshed) { tree_printTableHeader(); tree_printTableRow(*refreshed); }
     } else {
-        std::cout << "\n[!] Update failed.\n";
+        std::cout << "\n[!] Update failed: " << error << "\n";
     }
 }
 
 static void tree_deleteRecord(ParcelTree& tree) {
     if (tree.isEmpty()) { std::cout << "\n[!] The parcel tree is empty. Nothing to delete.\n"; return; }
-
     std::string id = tree_upperCopy(tree_askValidated(
         "Parcel ID to delete: ",
-        [](const std::string& s) { return ParcelTree::isValidParcelId(tree_upperCopy(s)); },
-        "Invalid Parcel ID. Use PCL followed by digits, e.g. PCL001."));
+        [](const std::string& v) { return ParcelTree::isValidParcelId(tree_upperCopy(v)); },
+        "Invalid Parcel ID. Use PCL followed by digits."));
     if (id.empty()) return;
-
-    Parcel* p = tree.searchParcel(id);
-    if (!p) { std::cout << "\n[!] Cannot delete: Parcel " << id << " does not exist.\n"; return; }
-
-    std::cout << "\nRecord to delete:"; tree_printTableHeader(); tree_printTableRow(*p);
-    if (!common::readYesNo("\nAre you sure you want to delete this record?")) {
-        std::cout << "Deletion cancelled.\n";
-        return;
+    Parcel* parcel = tree.searchParcel(id);
+    if (!parcel) { std::cout << "\n[!] Parcel " << id << " does not exist.\n"; return; }
+    std::cout << "\nRecord to delete:"; tree_printTableHeader(); tree_printTableRow(*parcel);
+    if (!common::readYesNo("\nDelete this parcel from the shared system?")) {
+        std::cout << "Deletion cancelled.\n"; return;
     }
-    if (tree.deleteParcel(id)) {
-        std::cout << "\n[OK] Parcel " << id << " deleted. Tree re-organised (BST property kept).\n";
-        if (tree.isEmpty()) std::cout << "[i] The tree is now empty.\n";
-    }
+    std::string error;
+    if (getParcelManager().removeRecord(id, error))
+        std::cout << "\n[OK] Parcel removed from Task 1 records and the BST.\n";
+    else
+        std::cout << "\n[!] Cannot delete: " << error << "\n";
 }
 
 // =====================================================================

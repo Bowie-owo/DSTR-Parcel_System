@@ -1,4 +1,5 @@
 #include "requestManager.hpp"
+#include "../task1_parcel_intake/parcelManager.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -139,19 +140,7 @@ RequestNode *RequestManager::findNode(const string &requestID) const
 
 bool RequestManager::parcelIsRegistered(const string &parcelID) const
 {
-    ifstream file("data/parcels.txt");
-    if (!file)
-        return false;
-
-    string line;
-    while (getline(file, line))
-    {
-        size_t separator = line.find('|');
-        string savedID = trim(line.substr(0, separator));
-        if (toUpper(savedID) == toUpper(parcelID))
-            return true;
-    }
-    return false;
+    return getParcelManager().findParcel(parcelID) != nullptr;
 }
 
 string RequestManager::makeRequestID() const
@@ -252,6 +241,18 @@ bool RequestManager::load(string &error)
             ++badLines;
             continue;
         }
+        // Historical finished requests may legitimately outlive a removed parcel.
+        // Active requests must always point to a real parcel and its actual recipient.
+        if (!isFinishedStatus(request.status))
+        {
+            const Parcel *parcel = getParcelManager().findParcel(request.parcelID);
+            if (parcel == nullptr || toUpper(trim(parcel->recipientID)) != request.recipientID ||
+                trim(parcel->recipientName) != request.recipientName)
+            {
+                ++badLines;
+                continue;
+            }
+        }
 
         RequestNode *newNode = new RequestNode(request);
         if (tail == nullptr)
@@ -286,9 +287,10 @@ bool RequestManager::createRequest(ServiceRequest &request, string &error)
         error = "Parcel ID is invalid.";
         return false;
     }
-    if (!parcelIsRegistered(request.parcelID))
+    const Parcel *registeredParcel = getParcelManager().findParcel(request.parcelID);
+    if (registeredParcel == nullptr)
     {
-        error = "That Parcel ID is not in data/parcels.txt. Register the parcel first.";
+        error = "That Parcel ID is not registered. Register the parcel first.";
         return false;
     }
     if (!isValidId(request.recipientID))
@@ -299,6 +301,17 @@ bool RequestManager::createRequest(ServiceRequest &request, string &error)
     if (!hasSafeText(request.recipientName, 80))
     {
         error = "Recipient name must contain 1 to 80 characters and cannot contain |.";
+        return false;
+    }
+    if (toUpper(trim(registeredParcel->recipientID)) != request.recipientID ||
+        trim(registeredParcel->recipientName) != request.recipientName)
+    {
+        error = "Recipient ID/name do not match the registered parcel recipient.";
+        return false;
+    }
+    if (isFinishedStatus(registeredParcel->status))
+    {
+        error = "A completed, returned or cancelled parcel cannot receive a new service request.";
         return false;
     }
     if (!isValidServiceType(request.serviceType))
